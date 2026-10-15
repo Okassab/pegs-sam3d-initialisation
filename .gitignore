@@ -1,0 +1,14 @@
+*token*
+.env
+.cache/
+checkpoints/
+*.ply
+*.pt
+*.pth
+*.safetensors
+pegs-dataset/
+.pixi/
+__pycache__/
+*.pyc
+*.so
+*.log
