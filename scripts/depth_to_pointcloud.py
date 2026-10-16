@@ -6,13 +6,16 @@ object mask, and selects the pixels that are both on the object and have
 a valid depth reading.
 """
 
-import json
+
 import cv2
+import sys
+import json
 import numpy as np
 
 # --- configurations ---
 
-VIEW = "side"
+# VIEW = "side"
+VIEW = sys.argv[1] if len(sys.argv) > 1 else "side"
 DATASET = "/workspace/pegs-dataset/real/single1_aruco/modelling/static"
 MASK_PATH = f"/workspace/pegs-sam3d-input/{VIEW}-mask.png"
 OUT_PATH = f"/workspace/pegs-sam3d-results/{VIEW}_points_world.npy"

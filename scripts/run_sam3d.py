@@ -14,12 +14,15 @@ import sys
 sys.path.insert(0, "/workspace/sam-3d-objects/notebook")
 from inference import Inference, load_image, load_mask
 
-VIEW = "side"
+# VIEW = "side"
+VIEW = sys.argv[1] if len(sys.argv) > 1 else "side"
+SEED = 42
+
 DATASET = "/workspace/pegs-dataset/real/single1_aruco/modelling/static"
 MASK_PATH = f"/workspace/pegs-sam3d-input/{VIEW}-mask.png"
 CHECKPOINT = "/workspace/sam-3d-objects/checkpoints/hf/pipeline.yaml"
 RESULTS = Path("/workspace/pegs-sam3d-results")
-SEED = 42
+
 
 image = load_image(f"{DATASET}/color/{VIEW}.png")
 mask = load_mask(MASK_PATH)

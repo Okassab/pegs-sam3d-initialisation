@@ -6,16 +6,20 @@ translation) to the SAM 3D reconstruction, then measures how closely the
 result matches the point cloud back-projected from the depth image.
 """
 
-import json
+
 import cv2
-import numpy as np
+import sys
+import json
 import itertools
-from helper import read_ply, quat_to_matrix, silhouette, iou
+import numpy as np
+from helper import read_ply, quat_to_matrix, silhouette, iou, align_centroid
 
 # --- configurations ---
 
 RESULTS = "/workspace/pegs-sam3d-results"
-VIEW = "side"
+# VIEW = "side"
+VIEW = sys.argv[1] if len(sys.argv) > 1 else "side"
+
 
 PLY_PATH = f"{RESULTS}/single1_aruco_{VIEW}_v2.ply"
 POSE_PATH = f"{RESULTS}/single1_aruco_{VIEW}_pose.json"
@@ -86,17 +90,20 @@ for label, R in (("R", R_base), ("R^T", R_base.T)):
     for name, F in signed_permutations().items():
         pts = (scale * (points_local @ R)) @ F.T + trans @ F.T
         sil = silhouette(pts, fl_x, fl_y, cx, cy, height, width)
-        results.append((iou(sil, mask), label, name, int(sil.sum())))
+        if sil.sum() == 0:
+            continue
+        raw = iou(sil, mask)
+        aligned = iou(align_centroid(sil, mask), mask)
+        results.append((aligned, raw, label, name, int(sil.sum())))
 
 results.sort(reverse=True)
-print(f"\n{'IoU':>7} {'R':6} {'axes':8} {'px':>8}")
-for score, label, name, px in results[:10]:
-    print(f"{score:7.3f} {label:6} {name:8} {px:8d}")
-
+print(f"\n{'aligned':>8} {'raw':>7} {'R':6} {'axes':8} {'px':>8}")
+for aligned, raw, label, name, px in results[:10]:
+    print(f"{aligned:8.3f} {raw:7.3f} {label:6} {name:8} {px:8d}")
 
 # --- save overlay figure ---
 
-best_score, best_label, best_name, _ = results[0]
+best_aligned, best_raw, best_label, best_name, _ = results[0]
 R = R_base.T if best_label == "R^T" else R_base
 F = signed_permutations()[best_name]
 pts = (scale * (points_local @ R)) @ F.T + trans @ F.T
@@ -108,4 +115,17 @@ overlay[sil] = (0, 255, 0)           # silhouette only: green
 overlay[mask & sil] = (0, 255, 255)  # both: yellow
 
 cv2.imwrite(f"{RESULTS}/{VIEW}_overlay.png", overlay)
-print(f"saved overlay ({best_label}, {best_name}, IoU {best_score:.3f})")
+print(f"saved overlay ({best_label}, {best_name}, raw {best_raw:.3f}, aligned {best_aligned:.3f})")
+
+# --- aligned overlay figure ---
+
+sil_aligned = align_centroid(sil, mask)
+
+overlay_aligned = np.zeros((height, width, 3), dtype=np.uint8)
+overlay_aligned[mask] = (0, 0, 255)
+overlay_aligned[sil_aligned] = (0, 255, 0)
+overlay_aligned[mask & sil_aligned] = (0, 255, 255)
+
+cv2.imwrite(f"{RESULTS}/{VIEW}_overlay_aligned.png", overlay_aligned)
+print(f"saved aligned overlay")
+

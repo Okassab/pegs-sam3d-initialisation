@@ -74,3 +74,17 @@ def silhouette(points, fl_x, fl_y, cx, cy, height, width):
 def iou(a, b):
     """Intersection over union of two boolean masks."""
     return (a & b).sum() / (a | b).sum()
+
+def centroid(mask):
+    """Row and column centroid of a boolean mask."""
+    rows, cols = np.nonzero(mask)
+    return rows.mean(), cols.mean()
+
+
+def align_centroid(moving, target):
+    """Shift `moving` so its centroid coincides with that of `target`."""
+    my, mx = centroid(moving)
+    ty, tx = centroid(target)
+    shifted = np.roll(moving, int(round(ty - my)), axis=0)
+    return np.roll(shifted, int(round(tx - mx)), axis=1)
+
