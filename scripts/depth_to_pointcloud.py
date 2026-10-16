@@ -10,15 +10,16 @@ import json
 import cv2
 import numpy as np
 
-# -------------------------- configurations --------------------------
+# --- configurations ---
 
-DATASET = "/workspace/pegs-dataset/real/single1_aruco/modelling/static"
-MASK_PATH = "/workspace/pegs-sam3d-input/side-mask.png"
-OUT_PATH = "/workspace/pegs-sam3d-results/side_points_world.npy"
 VIEW = "side"
+DATASET = "/workspace/pegs-dataset/real/single1_aruco/modelling/static"
+MASK_PATH = f"/workspace/pegs-sam3d-input/{VIEW}-mask.png"
+OUT_PATH = f"/workspace/pegs-sam3d-results/{VIEW}_points_world.npy"
+OUT_PATH_CAMERA = f"/workspace/pegs-sam3d-results/{VIEW}_points_camera.npy"
 FLIP = np.diag([1.0, -1.0, -1.0, 1.0]) # Blender/OpenGL -> OpenCV axis flip, as used by PEGS frames.py
 
-# -------------------------- load --------------------------
+# --- load ---
 
 with open(f"{DATASET}/transforms.json") as f:
   data = json.load(f)
@@ -26,9 +27,7 @@ with open(f"{DATASET}/transforms.json") as f:
 depth = cv2.imread(f"{DATASET}/depth/{VIEW}.png", cv2.IMREAD_UNCHANGED)
 mask = cv2.imread(MASK_PATH, cv2.IMREAD_UNCHANGED)
 
-# print([f["name"] for f in data["frames"]])
-
-# -------------------------- camera parameters --------------------------
+# --- camera parameters ---
 
 camera = None
 for frames in data['frames']:
@@ -44,7 +43,7 @@ fl_y = camera["fl_y"]
 cx = camera["cx"]
 cy = camera["cy"]
 
-# -------------------------- select usable pixels --------------------------
+# --- select usable pixels ---
 
 is_object = mask == 255
 valid = is_object & (depth > 0)
@@ -54,12 +53,7 @@ print(f"mask  : {mask.shape} {mask.dtype}, values {np.unique(mask)}")
 print(f"object pixels : {is_object.sum()}")
 print(f"with valid depth : {valid.sum()}")
 
-
-# print(selected.keys())
-# print(json.dumps(selected, indent=1))
-
-
-# -------------------------- back-project to camera coordinates --------------------------
+# --- back-project to camera coordinates ---
 
 v, u = np.nonzero(valid)
 Z = depth[valid] * camera["integer_depth_scale"]
@@ -77,7 +71,7 @@ print(f"X range: {X.min():.3f} to {X.max():.3f} m")
 print(f"Y range: {Y.min():.3f} to {Y.max():.3f} m")
 print(f"points_camera: {points_camera.shape}")
 
-# -------------------------- transform to world coordinates --------------------------
+# --- transform to world coordinates ---
 
 ones = np.ones((points_camera.shape[0], 1))
 points_h = np.hstack([points_camera, ones]) # (N, 4) homogeneous
@@ -88,7 +82,12 @@ print(f"world X: {points_world[:, 0].min():.3f} to {points_world[:, 0].max():.3f
 print(f"world Y: {points_world[:, 1].min():.3f} to {points_world[:, 1].max():.3f} m")
 print(f"world Z: {points_world[:, 2].min():.3f} to {points_world[:, 2].max():.3f} m")
 
-# -------------------------- save --------------------------
+# --- save ---
 
 np.save(OUT_PATH, points_world)
+np.save(OUT_PATH_CAMERA, points_camera)
+
+
 print(f"saved {points_world.shape[0]} points to {OUT_PATH}")
+print(f"saved {points_camera.shape[0]} points to {OUT_PATH_CAMERA}")
+

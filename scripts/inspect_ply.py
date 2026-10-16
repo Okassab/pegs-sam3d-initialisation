@@ -12,38 +12,7 @@ Usage:
 
 import sys
 import numpy as np
-
-
-def read_ply(path):
-    """Parse a binary little-endian PLY into a numpy structured array."""
-    with open(path, "rb") as f:
-        # --- header is plain ASCII, terminated by "end_header" ---
-        header = []
-        while True:
-            line = f.readline().decode("ascii").strip()
-            header.append(line)
-            if line == "end_header":
-                break
-
-        n_vertices = None
-        properties = []
-        for line in header:
-            if line.startswith("element vertex"):
-                n_vertices = int(line.split()[-1])
-            elif line.startswith("property float"):
-                properties.append(line.split()[-1])
-
-        if n_vertices is None:
-            raise ValueError("No 'element vertex' line found in header")
-
-        fmt = [l for l in header if l.startswith("format")][0]
-        if "binary_little_endian" not in fmt:
-            raise ValueError(f"Only binary_little_endian is supported, got: {fmt}")
-
-        dtype = np.dtype([(p, "<f4") for p in properties])
-        data = np.frombuffer(f.read(n_vertices * dtype.itemsize), dtype=dtype)
-
-    return data, properties, n_vertices
+from helper import read_ply
 
 
 def summarise(data, properties, n_vertices, path):
